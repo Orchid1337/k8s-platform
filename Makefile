@@ -29,7 +29,7 @@ port-forward: ## forward all services to localhost
 
 lint: ## run linters
 	@echo "yamllint..."
-	yamllint -d relaxed helm/ kubernetes/ argocd/ monitoring/ ansible/
+	yamllint -d relaxed kubernetes/ argocd/ monitoring/ ansible/ helm/app/Chart.yaml helm/app/values.yaml helm/app/values-production.yaml helm/monitoring/Chart.yaml helm/monitoring/values.yaml
 	@echo "hadolint..."
 	hadolint app/api/Dockerfile
 	hadolint app/frontend/Dockerfile

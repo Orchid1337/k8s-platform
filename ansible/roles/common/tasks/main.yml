@@ -64,9 +64,3 @@
     dest: /etc/systemd/journald.conf.d/k8s-platform.conf
     mode: "0644"
   notify: Restart journald
-
-handlers:
-  - name: Restart journald
-    ansible.builtin.systemd:
-      name: systemd-journald
-      state: restarted

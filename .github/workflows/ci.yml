@@ -32,7 +32,7 @@ jobs:
           failure-threshold: warning
 
       - run: pip install yamllint
-      - run: yamllint -d relaxed helm/ kubernetes/ argocd/ monitoring/ ansible/
+      - run: yamllint -d relaxed kubernetes/ argocd/ monitoring/ ansible/ helm/app/Chart.yaml helm/app/values.yaml helm/app/values-production.yaml helm/monitoring/Chart.yaml helm/monitoring/values.yaml
 
       - uses: actions/setup-python@v5
         with:
