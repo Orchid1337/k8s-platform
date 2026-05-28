@@ -1,0 +1,9 @@
+apiVersion: v2
+name: monitoring
+description: Custom monitoring resources for k8s-platform (Prometheus rules and Grafana dashboards)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Platform Team
+    email: platform@example.com

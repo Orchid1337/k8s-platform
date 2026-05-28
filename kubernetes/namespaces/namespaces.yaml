@@ -1,0 +1,147 @@
+# platform namespaces
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    environment: production
+    team: application
+    managed-by: argocd
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    environment: production
+    team: platform
+    managed-by: argocd
+    # privileged because node-exporter needs hostPath + hostNetwork + hostPID
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    environment: production
+    team: platform
+    managed-by: manual
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-nginx
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    environment: production
+    team: platform
+    managed-by: argocd
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vault
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    environment: production
+    team: security
+    managed-by: argocd
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    environment: production
+    team: platform
+    managed-by: argocd
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+---
+# resource quotas — don't let one namespace eat everything
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: app-quota
+  namespace: app
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 4Gi
+    limits.cpu: "8"
+    limits.memory: 8Gi
+    pods: "20"
+    services: "10"
+    persistentvolumeclaims: "5"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: monitoring-quota
+  namespace: monitoring
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    pods: "50"
+---
+# limit ranges — sane defaults so people don't forget resource requests
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: app-limit-range
+  namespace: app
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 200m
+        memory: 256Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: monitoring-limit-range
+  namespace: monitoring
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "4"
+        memory: 8Gi

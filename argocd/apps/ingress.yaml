@@ -1,0 +1,58 @@
+# ArgoCD Application for ingress-nginx controller
+# Manages the cluster's ingress infrastructure
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-nginx
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    app.kubernetes.io/component: networking
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    # Use the official ingress-nginx Helm chart
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    chart: ingress-nginx
+    targetRevision: 4.9.1
+    helm:
+      values: |
+        controller:
+          # Resource limits for the ingress controller
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          # Enable metrics for Prometheus scraping
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              namespace: monitoring
+          # Security context
+          podSecurityContext:
+            runAsNonRoot: true
+          # Admission webhooks for validating ingress resources
+          admissionWebhooks:
+            enabled: true
+          # Use host network for local development (kind/k3s)
+          hostNetwork: false
+          service:
+            type: NodePort
+            nodePorts:
+              http: 30080
+              https: 30443
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-nginx
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

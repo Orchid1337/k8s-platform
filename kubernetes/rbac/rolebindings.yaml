@@ -1,0 +1,50 @@
+# RoleBindings and ClusterRoleBindings for the k8s-platform
+---
+# Bind developer role to the developers group in the app namespace only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k8s-platform-developer-binding
+  namespace: app
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+subjects:
+  - kind: Group
+    name: developers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: k8s-platform-developer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Bind monitoring role to the Prometheus service account (cluster-wide)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-platform-monitoring-binding
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: k8s-platform-monitoring
+  apiGroup: rbac.authorization.k8s.io
+---
+# Bind ArgoCD manager role to the ArgoCD application controller
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-platform-argocd-manager-binding
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+subjects:
+  - kind: ServiceAccount
+    name: argocd-application-controller
+    namespace: argocd
+roleRef:
+  kind: ClusterRole
+  name: k8s-platform-argocd-manager
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,70 @@
+# =============================================================================
+# K8s Platform .gitignore
+# =============================================================================
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Certificates and secrets
+*.pem
+*.key
+*.crt
+*.csr
+.certs/
+*.vault-token
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node (if any frontend tooling is added)
+node_modules/
+.npm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Docker
+.docker/
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/

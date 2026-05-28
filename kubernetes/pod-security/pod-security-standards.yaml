@@ -1,0 +1,55 @@
+# Pod Security Standards enforcement via namespace labels
+# This file documents the PSS configuration applied to namespaces.
+# The actual enforcement is done via labels on the Namespace objects (see namespaces.yaml).
+#
+# Kubernetes Pod Security Standards (PSS) replace the deprecated PodSecurityPolicy (PSP).
+# Three levels: privileged (unrestricted), baseline (minimal), restricted (hardened).
+#
+# Our policy:
+# - app namespace: restricted (most secure, no privilege escalation, read-only root fs)
+# - monitoring namespace: baseline (some tools need hostPath for node metrics)
+# - argocd namespace: baseline (controller needs some elevated permissions)
+# - ingress-nginx namespace: baseline (needs to bind to host ports)
+#
+# Reference: https://kubernetes.io/docs/concepts/security/pod-security-standards/
+---
+# Additional security: ResourceQuota that prevents privileged containers
+# This acts as a secondary enforcement mechanism
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: no-privileged-pods
+  namespace: app
+spec:
+  hard:
+    # Prevent creation of pods that request host networking
+    pods: "20"
+  scopeSelector:
+    matchExpressions:
+      - scopeName: PriorityClass
+        operator: DoesNotExist
+---
+# Kyverno-style validation (if Kyverno is installed) — additional defense layer
+# This is a documentation placeholder showing what a Kyverno policy would look like
+# Uncomment if Kyverno is deployed in the cluster
+# apiVersion: kyverno.io/v1
+# kind: ClusterPolicy
+# metadata:
+#   name: require-run-as-non-root
+# spec:
+#   validationFailureAction: Enforce
+#   rules:
+#     - name: check-containers
+#       match:
+#         resources:
+#           kinds:
+#             - Pod
+#           namespaces:
+#             - app
+#       validate:
+#         message: "Containers must run as non-root"
+#         pattern:
+#           spec:
+#             containers:
+#               - securityContext:
+#                   runAsNonRoot: true

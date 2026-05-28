@@ -1,0 +1,15 @@
+# Monitoring chart values
+# These configure custom PrometheusRules and Grafana dashboard ConfigMaps
+
+prometheus:
+  # Alert thresholds — tune these per environment
+  alerts:
+    cpuThreshold: 85
+    memoryThreshold: 90
+    errorRateThreshold: 0.05
+    latencyThresholdSeconds: 2
+
+grafana:
+  # Sidecar label that triggers dashboard auto-discovery
+  dashboardLabel: grafana_dashboard
+  dashboardLabelValue: "1"

@@ -1,0 +1,63 @@
+# RBAC ClusterRoles for the k8s-platform
+# Follows principle of least privilege — each role has only the permissions it needs
+---
+# Developer role — read-only access to application resources
+# Used by development team members for debugging and monitoring
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8s-platform-developer
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    rbac.k8s-platform.io/role: developer
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, services, configmaps, events]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch]
+---
+# Monitoring role — read access to all resources for Prometheus service discovery
+# Prometheus needs broad read access to discover and scrape targets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8s-platform-monitoring
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    rbac.k8s-platform.io/role: monitoring
+rules:
+  - apiGroups: [""]
+    resources: [nodes, nodes/metrics, nodes/proxy, services, endpoints, pods]
+    verbs: [get, list, watch]
+  - apiGroups: [extensions, networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - nonResourceURLs: [/metrics, /metrics/cadvisor]
+    verbs: [get]
+---
+# ArgoCD manager role — full access for GitOps operations
+# ArgoCD needs to create, update, and delete resources across namespaces
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8s-platform-argocd-manager
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    rbac.k8s-platform.io/role: argocd-manager
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+  - nonResourceURLs: ["*"]
+    verbs: ["*"]

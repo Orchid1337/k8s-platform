@@ -1,0 +1,17 @@
+# ConfigMap containing Grafana dashboards — auto-discovered by the Grafana sidecar
+# The sidecar watches for ConfigMaps with the label grafana_dashboard=1
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-platform-dashboards
+  labels:
+    app.kubernetes.io/name: monitoring
+    app.kubernetes.io/part-of: k8s-platform
+    {{ .Values.grafana.dashboardLabel }}: {{ .Values.grafana.dashboardLabelValue | quote }}
+data:
+  # Dashboard JSON files are stored separately in monitoring/grafana/dashboards/
+  # and applied via ansible or kubectl. This ConfigMap references them for ArgoCD management.
+  cluster-overview.json: |-
+    {{- .Files.Get "dashboards/cluster-overview.json" | nindent 4 }}
+  app-metrics.json: |-
+    {{- .Files.Get "dashboards/app-metrics.json" | nindent 4 }}

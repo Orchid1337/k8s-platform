@@ -1,0 +1,54 @@
+# Pre-commit hooks for the k8s-platform project
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+---
+repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint
+        args: [--failure-threshold, warning]
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.34.0
+    hooks:
+      - id: yamllint
+        args: [-d, relaxed]
+
+  # Secret detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: (monitoring/grafana/dashboards/.*\.json|helm/monitoring/values\.yaml)
+
+  # Terraform formatting and validation
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.86.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+      - id: terraform_tflint
+        args:
+          - --args=--only=terraform_deprecated_interpolation
+          - --args=--only=terraform_deprecated_index
+          - --args=--only=terraform_unused_declarations

@@ -1,0 +1,101 @@
+# HashiCorp Vault installation for secrets management
+# Uses the official Helm chart values applied as a HelmRelease-style manifest
+# In practice, this is deployed via ArgoCD or helm install
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/part-of: k8s-platform
+---
+# Vault server configuration — dev mode for local development
+# WARNING: Dev mode is NOT for production. It stores data in-memory and auto-unseals.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/part-of: k8s-platform
+spec:
+  serviceName: vault
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vault
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vault
+        app.kubernetes.io/part-of: k8s-platform
+    spec:
+      serviceAccountName: vault
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: vault
+          image: hashicorp/vault:1.15.4
+          args:
+            - server
+            - -dev
+            - -dev-root-token-id=root
+            - -dev-listen-address=0.0.0.0:8200
+          ports:
+            - containerPort: 8200
+              name: http
+              protocol: TCP
+            - containerPort: 8201
+              name: internal
+              protocol: TCP
+          env:
+            - name: VAULT_DEV_ROOT_TOKEN_ID
+              value: "root"
+            - name: VAULT_ADDR
+              value: "http://127.0.0.1:8200"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /v1/sys/health
+              port: 8200
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok=true
+              port: 8200
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/part-of: k8s-platform
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8200
+      targetPort: 8200
+      protocol: TCP
+      name: http
+    - port: 8201
+      targetPort: 8201
+      protocol: TCP
+      name: internal
+  selector:
+    app.kubernetes.io/name: vault

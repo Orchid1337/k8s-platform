@@ -1,0 +1,117 @@
+---
+- name: Setup k8s cluster
+  hosts: control_plane
+  become: true
+  gather_facts: true
+
+  vars:
+    helm_version: "3.14.2"
+    argocd_version: "2.10.1"
+    kubeconfig_dest: "{{ ansible_env.HOME }}/.kube/config"
+
+  pre_tasks:
+    - name: Install basics
+      ansible.builtin.package:
+        name: [curl, wget, git, jq]
+        state: present
+
+  roles:
+    - role: common
+    - role: k3s
+
+  tasks:
+    - name: Create .kube dir
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.kube"
+        state: directory
+        mode: "0700"
+        owner: "{{ ansible_env.USER }}"
+
+    - name: Copy kubeconfig
+      ansible.builtin.copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ kubeconfig_dest }}"
+        remote_src: true
+        mode: "0600"
+        owner: "{{ ansible_env.USER }}"
+
+    - name: Fix kubeconfig server address
+      ansible.builtin.replace:
+        path: "{{ kubeconfig_dest }}"
+        regexp: "https://127.0.0.1:6443"
+        replace: "https://{{ ansible_default_ipv4.address }}:6443"
+
+    # helm
+    - name: Check helm
+      ansible.builtin.command: helm version --short
+      register: helm_check
+      changed_when: false
+      failed_when: false
+
+    - name: Install helm
+      when: helm_check.rc != 0
+      block:
+        - name: Download helm script
+          ansible.builtin.get_url:
+            url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+            dest: /tmp/get_helm.sh
+            mode: "0755"
+
+        - name: Run helm installer
+          ansible.builtin.command: /tmp/get_helm.sh --version v{{ helm_version }}
+          changed_when: true
+
+    # argocd
+    - name: Create argocd namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: argocd
+        kubeconfig: "{{ kubeconfig_dest }}"
+
+    - name: Install ArgoCD
+      ansible.builtin.command: >
+        kubectl apply -n argocd
+        -f https://raw.githubusercontent.com/argoproj/argo-cd/v{{ argocd_version }}/manifests/install.yaml
+        --kubeconfig {{ kubeconfig_dest }}
+      changed_when: true
+
+    - name: Wait for argocd-server
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: argocd-server
+        namespace: argocd
+        kubeconfig: "{{ kubeconfig_dest }}"
+        wait: true
+        wait_timeout: 300
+        wait_condition:
+          type: Available
+          status: "True"
+
+    # bootstrap app-of-apps
+    - name: Apply argocd project
+      ansible.builtin.command: >
+        kubectl apply -f {{ playbook_dir }}/../../argocd/projects/platform.yaml
+        --kubeconfig {{ kubeconfig_dest }}
+      changed_when: true
+
+    - name: Apply app-of-apps
+      ansible.builtin.command: >
+        kubectl apply -f {{ playbook_dir }}/../../argocd/apps/app-of-apps.yaml
+        --kubeconfig {{ kubeconfig_dest }}
+      changed_when: true
+
+    - name: Get argocd password
+      ansible.builtin.command: >
+        kubectl -n argocd get secret argocd-initial-admin-secret
+        -o jsonpath="{.data.password}"
+        --kubeconfig {{ kubeconfig_dest }}
+      register: argocd_password
+      changed_when: false
+
+    - name: Print argocd creds
+      ansible.builtin.debug:
+        msg: "ArgoCD ready — admin / {{ argocd_password.stdout | b64decode }}"

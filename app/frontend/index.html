@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <title>K8s Platform - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .container { max-width: 800px; width: 100%; }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #38bdf8;
+        }
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+        .status-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .status-card h2 {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #64748b;
+        }
+        .dot.healthy { background: #22c55e; box-shadow: 0 0 8px #22c55e80; }
+        .dot.unhealthy { background: #ef4444; box-shadow: 0 0 8px #ef444480; }
+        .dot.loading { background: #eab308; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .info-item {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .info-item .label { color: #64748b; font-size: 0.85rem; }
+        .info-item .value { color: #f1f5f9; font-size: 1.1rem; margin-top: 0.25rem; }
+        .refresh-note {
+            text-align: center;
+            color: #475569;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+        }
+        .error-msg { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>&#x1F680; K8s Platform</h1>
+        <p class="subtitle">Production-like Kubernetes Environment Dashboard</p>
+
+        <div class="status-card">
+            <h2>API Health</h2>
+            <div class="status-indicator">
+                <div class="dot" id="health-dot"></div>
+                <span id="health-text">Checking...</span>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h2>API Readiness</h2>
+            <div class="status-indicator">
+                <div class="dot" id="ready-dot"></div>
+                <span id="ready-text">Checking...</span>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h2>Application Info</h2>
+            <div class="info-grid" id="info-grid">
+                <div class="info-item">
+                    <div class="label">Version</div>
+                    <div class="value" id="app-version">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Environment</div>
+                    <div class="value" id="app-env">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Status</div>
+                    <div class="value" id="app-status">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Last Checked</div>
+                    <div class="value" id="last-check">-</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="refresh-note">Auto-refreshes every 30 seconds</p>
+    </div>
+
+    <script>
+        // Fetch health status from the API backend (proxied via nginx)
+        async function checkHealth() {
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                const dot = document.getElementById('health-dot');
+                const text = document.getElementById('health-text');
+                if (data.status === 'healthy') {
+                    dot.className = 'dot healthy';
+                    text.textContent = 'Healthy';
+                } else {
+                    dot.className = 'dot unhealthy';
+                    text.textContent = 'Unhealthy';
+                }
+            } catch (e) {
+                document.getElementById('health-dot').className = 'dot unhealthy';
+                document.getElementById('health-text').innerHTML = '<span class="error-msg">Unreachable</span>';
+            }
+        }
+
+        async function checkReady() {
+            try {
+                const res = await fetch('/api/ready');
+                const data = await res.json();
+                const dot = document.getElementById('ready-dot');
+                const text = document.getElementById('ready-text');
+                if (res.ok && data.status === 'ready') {
+                    dot.className = 'dot healthy';
+                    text.textContent = 'Ready (uptime: ' + data.uptime_seconds + 's)';
+                } else {
+                    dot.className = 'dot loading';
+                    text.textContent = 'Not Ready: ' + (data.reason || 'unknown');
+                }
+            } catch (e) {
+                document.getElementById('ready-dot').className = 'dot unhealthy';
+                document.getElementById('ready-text').innerHTML = '<span class="error-msg">Unreachable</span>';
+            }
+        }
+
+        async function fetchInfo() {
+            try {
+                const res = await fetch('/api/');
+                const data = await res.json();
+                document.getElementById('app-version').textContent = data.version || '-';
+                document.getElementById('app-env').textContent = data.environment || '-';
+                document.getElementById('app-status').textContent = data.status || '-';
+                document.getElementById('last-check').textContent = new Date().toLocaleTimeString();
+            } catch (e) {
+                document.getElementById('app-status').innerHTML = '<span class="error-msg">Error</span>';
+            }
+        }
+
+        function refreshAll() {
+            checkHealth();
+            checkReady();
+            fetchInfo();
+        }
+
+        // Initial fetch and auto-refresh every 30 seconds
+        refreshAll();
+        setInterval(refreshAll, 30000);
+    </script>
+</body>
+</html>

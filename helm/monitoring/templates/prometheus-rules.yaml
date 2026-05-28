@@ -1,0 +1,111 @@
+# PrometheusRule CRD — defines alerting rules for the kube-prometheus-stack
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: k8s-platform-alerts
+  labels:
+    app.kubernetes.io/name: monitoring
+    app.kubernetes.io/part-of: k8s-platform
+    # This label ensures kube-prometheus-stack picks up the rules
+    release: prometheus
+spec:
+  groups:
+    # -------------------------------------------------------------------------
+    # Pod-level alerts
+    # -------------------------------------------------------------------------
+    - name: kubernetes-pods
+      rules:
+        - alert: KubePodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} is crash looping"
+            description: "Pod has restarted more than 3 times in the last 15 minutes."
+            runbook_url: "https://runbooks.example.com/KubePodCrashLooping"
+
+        - alert: KubePodNotReady
+          expr: |
+            kube_pod_status_ready{condition="true"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} not ready"
+            description: "Pod has been in a non-ready state for more than 10 minutes."
+
+    # -------------------------------------------------------------------------
+    # Node-level alerts
+    # -------------------------------------------------------------------------
+    - name: kubernetes-nodes
+      rules:
+        - alert: NodeHighCPU
+          expr: |
+            100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > {{ .Values.prometheus.alerts.cpuThreshold }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{`{{ $labels.instance }}`}} CPU usage above {{ .Values.prometheus.alerts.cpuThreshold }}%"
+            description: "Node CPU utilization has been above threshold for 5 minutes."
+
+        - alert: NodeHighMemory
+          expr: |
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > {{ .Values.prometheus.alerts.memoryThreshold }}
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{`{{ $labels.instance }}`}} memory usage above {{ .Values.prometheus.alerts.memoryThreshold }}%"
+            description: "Node memory utilization is critically high."
+
+        - alert: NodeDiskPressure
+          expr: |
+            kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{`{{ $labels.node }}`}} has disk pressure"
+            description: "Node is reporting DiskPressure condition. Immediate action required."
+
+    # -------------------------------------------------------------------------
+    # Application-level alerts
+    # -------------------------------------------------------------------------
+    - name: application
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+            /
+            sum(rate(http_requests_total[5m])) by (job)
+            > {{ .Values.prometheus.alerts.errorRateThreshold }}
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate on {{`{{ $labels.job }}`}}"
+            description: "More than {{ .Values.prometheus.alerts.errorRateThreshold | mul 100 }}% of requests are failing with 5xx errors."
+
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job))
+            > {{ .Values.prometheus.alerts.latencyThresholdSeconds }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High P99 latency on {{`{{ $labels.job }}`}}"
+            description: "99th percentile latency exceeds {{ .Values.prometheus.alerts.latencyThresholdSeconds }}s."
+
+        - alert: AppDown
+          expr: |
+            up{job="sample-app"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Application sample-app is down"
+            description: "Prometheus cannot scrape the sample-app target. The application may be crashed or unreachable."

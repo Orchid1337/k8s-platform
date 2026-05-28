@@ -1,0 +1,21 @@
+# Default variables for the k3s role
+---
+k3s_version: "v1.29.2+k3s1"
+k3s_install_url: "https://get.k3s.io"
+
+# Server configuration
+k3s_server_args:
+  - "--disable=traefik"  # We use ingress-nginx instead
+  - "--disable=servicelb"  # We use MetalLB instead
+  - "--write-kubeconfig-mode=644"
+  - "--tls-san={{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+
+# Agent configuration
+k3s_agent_args: []
+
+# Timeouts
+k3s_wait_timeout: 300
+
+# Kubeconfig
+k3s_kubeconfig_src: /etc/rancher/k3s/k3s.yaml
+k3s_kubeconfig_dest: "{{ ansible_env.HOME }}/.kube/config"

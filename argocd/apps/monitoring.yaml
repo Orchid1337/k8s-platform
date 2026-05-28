@@ -1,0 +1,37 @@
+# ArgoCD Application for the monitoring stack
+# Deploys custom PrometheusRules and Grafana dashboards
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-platform
+    app.kubernetes.io/component: observability
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/Orchid1337/k8s-platform.git
+    targetRevision: HEAD
+    path: helm/monitoring
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 2m

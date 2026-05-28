@@ -1,0 +1,16 @@
+apiVersion: v2
+name: sample-app
+description: A production-ready Helm chart for the k8s-platform sample application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Platform Team
+    email: platform@example.com
+keywords:
+  - kubernetes
+  - fastapi
+  - microservice
+home: https://github.com/Orchid1337/k8s-platform
+sources:
+  - https://github.com/Orchid1337/k8s-platform

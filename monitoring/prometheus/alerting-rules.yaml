@@ -1,0 +1,91 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: k8s-platform-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: k8s-platform
+    release: prometheus  # required or kube-prometheus-stack won't pick it up
+spec:
+  groups:
+    - name: kubernetes-pods
+      rules:
+        - alert: KubePodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+
+        - alert: KubePodNotReady
+          expr: kube_pod_status_ready{condition="true"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} not ready for 10m"
+
+        - alert: KubePodOOMKilled
+          expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.pod }}/{{ $labels.container }} OOM killed — bump memory limits"
+
+    - name: kubernetes-nodes
+      rules:
+        - alert: NodeHighCPU
+          expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} CPU > 85%"
+
+        - alert: NodeHighMemory
+          expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} memory > 90%"
+
+        - alert: NodeDiskPressure
+          expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.node }} disk pressure"
+
+    - name: application
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+            / sum(rate(http_requests_total[5m])) by (job) > 0.05
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: ">5% error rate on {{ $labels.job }}"
+
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "P99 latency > 2s on {{ $labels.job }}"
+
+        - alert: AppDown
+          expr: up{job="sample-app"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "sample-app is down"

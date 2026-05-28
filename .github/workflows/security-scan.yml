@@ -1,0 +1,80 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # mondays
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy-fs:
+    name: Filesystem scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: 1
+          severity: HIGH,CRITICAL
+          scanners: vuln,secret,misconfig
+
+  trivy-config:
+    name: K8s manifest scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: kubernetes/
+          format: table
+          exit-code: 1
+          severity: HIGH,CRITICAL
+
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: helm/
+          format: table
+          exit-code: 0  # warn only, helm templates trigger false positives
+          severity: HIGH,CRITICAL
+
+  checkov:
+    name: IaC scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: cli
+          soft_fail: false
+          skip_check: CKV_TF_1
+
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: kubernetes/
+          framework: kubernetes
+          output_format: cli
+          soft_fail: false
+
+  gitleaks:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
