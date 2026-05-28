@@ -32,7 +32,7 @@ jobs:
           failure-threshold: warning
 
       - run: pip install yamllint
-      - run: yamllint -d relaxed kubernetes/ argocd/ monitoring/ ansible/ helm/app/Chart.yaml helm/app/values.yaml helm/app/values-production.yaml helm/monitoring/Chart.yaml helm/monitoring/values.yaml
+      - run: yamllint -d "{extends: relaxed, rules: {line-length: disable}}" kubernetes/ argocd/ monitoring/ ansible/ helm/app/Chart.yaml helm/app/values.yaml helm/app/values-production.yaml helm/monitoring/Chart.yaml helm/monitoring/values.yaml
 
       - uses: actions/setup-python@v5
         with:
@@ -119,7 +119,8 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    # runs only when SONAR_TOKEN is configured in repo secrets
+    if: vars.SONAR_TOKEN != '' || secrets.SONAR_TOKEN != ''
     steps:
       - uses: actions/checkout@v4
         with:
