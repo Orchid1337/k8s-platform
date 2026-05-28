@@ -89,7 +89,7 @@ Then open in your browser:
 
 ### 4. What to try
 
-- **Grafana**: Hamburger menu → Dashboards → pick "Kubernetes / Compute Resources / Cluster" — live graphs
+- **Grafana**: Click the ☰ menu (top-left) → Dashboards → pick "Kubernetes / Compute Resources / Cluster" — live graphs
 - **Prometheus**: Type `up` in the query box → Execute — shows all monitored targets
 - **App**: Returns `{"status": "ok", "version": "1.0.0"}`
 - **Vault**: Secrets Engines → secret → create a secret
