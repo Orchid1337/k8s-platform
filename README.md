@@ -52,14 +52,78 @@ After running `make bootstrap` (~10 min on first run):
 
 ### 1. Install prerequisites
 
-| Tool | Windows | Mac |
-|------|---------|-----|
-| Docker | [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/) | `brew install --cask docker` |
-| kubectl | `winget install Kubernetes.kubectl` | `brew install kubectl` |
-| Helm | `winget install Helm.Helm` | `brew install helm` |
-| Terraform | `winget install Hashicorp.Terraform` | `brew install terraform` |
-| kind | `winget install Kubernetes.kind` | `brew install kind` |
-| ArgoCD CLI | [GitHub releases](https://github.com/argoproj/argo-cd/releases) | `brew install argocd` |
+<details>
+<summary><strong>🐧 Linux (Ubuntu/Debian)</strong></summary>
+
+```bash
+# Docker
+sudo apt-get update
+sudo apt-get install -y docker.io
+sudo usermod -aG docker $USER
+# Log out and back in for group change to take effect
+
+# kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Terraform
+sudo apt-get install -y gnupg software-properties-common
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update && sudo apt-get install -y terraform
+
+# kind
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+sudo install -o root -g root -m 0755 kind /usr/local/bin/kind
+
+# ArgoCD CLI
+curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+sudo install -m 555 argocd /usr/local/bin/argocd
+```
+
+</details>
+
+<details>
+<summary><strong>🍎 macOS</strong></summary>
+
+```bash
+# All via Homebrew (https://brew.sh)
+brew install --cask docker
+brew install kubectl helm terraform kind argocd
+```
+
+> After installing Docker Desktop, launch it once to complete setup.
+
+</details>
+
+<details>
+<summary><strong>🪟 Windows</strong></summary>
+
+```powershell
+# Docker — install Docker Desktop from https://docs.docker.com/desktop/install/windows-install/
+
+# Rest via winget
+winget install Kubernetes.kubectl
+winget install Helm.Helm
+winget install Hashicorp.Terraform
+winget install Kubernetes.kind
+
+# ArgoCD CLI — download from https://github.com/argoproj/argo-cd/releases
+# and add to PATH
+```
+
+> Requires WSL2 enabled for Docker Desktop.
+
+</details>
+
+**Verify everything is installed:**
+
+```bash
+docker --version && kubectl version --client && helm version --short && terraform --version && kind --version && argocd version --client
+```
 
 ### 2. Start the platform
 
