@@ -58,6 +58,10 @@ node_modules/
 .DS_Store
 Thumbs.db
 Desktop.ini
+nul
+
+# Terraform local state directories
+terraform/k8s-platform-config/
 
 # Docker
 .docker/
