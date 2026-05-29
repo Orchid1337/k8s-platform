@@ -125,6 +125,46 @@ ok "Vault done"
 
 # --- done ---
 echo ""
+info "Running smoke tests..."
+SMOKE_PASS=0
+SMOKE_FAIL=0
+
+# Check all critical deployments
+for ns_deploy in "argocd/argocd-server" "cert-manager/cert-manager" "ingress-nginx/ingress-nginx-controller" "monitoring/prometheus-grafana"; do
+    ns="${ns_deploy%%/*}"
+    deploy="${ns_deploy##*/}"
+    if kubectl get deployment "$deploy" -n "$ns" &>/dev/null; then
+        SMOKE_PASS=$((SMOKE_PASS + 1))
+    else
+        warn "Missing: $ns/$deploy"
+        SMOKE_FAIL=$((SMOKE_FAIL + 1))
+    fi
+done
+
+# Check Vault pod
+if kubectl get pod vault-0 -n vault &>/dev/null; then
+    SMOKE_PASS=$((SMOKE_PASS + 1))
+else
+    warn "Missing: vault/vault-0"
+    SMOKE_FAIL=$((SMOKE_FAIL + 1))
+fi
+
+# Check nodes
+NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+if [ "$NODE_COUNT" -ge 3 ]; then
+    SMOKE_PASS=$((SMOKE_PASS + 1))
+else
+    warn "Expected 3 nodes, got $NODE_COUNT"
+    SMOKE_FAIL=$((SMOKE_FAIL + 1))
+fi
+
+if [ "$SMOKE_FAIL" -eq 0 ]; then
+    ok "All smoke tests passed ($SMOKE_PASS checks)"
+else
+    warn "Smoke tests: $SMOKE_PASS passed, $SMOKE_FAIL failed"
+fi
+
+echo ""
 echo "Platform is ready."
 echo ""
 echo "  Run 'make port-forward' to access services:"

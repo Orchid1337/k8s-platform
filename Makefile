@@ -1,4 +1,4 @@
-.PHONY: help bootstrap teardown port-forward lint test build scan sync rollback status logs clean
+.PHONY: help bootstrap teardown port-forward lint test build scan sync rollback status logs verify clean
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
@@ -70,6 +70,16 @@ status: ## cluster status
 
 logs: ## tail app logs
 	kubectl logs -n app -l app.kubernetes.io/name=sample-app --tail=100 -f
+
+verify: ## run smoke tests against running cluster
+	@echo "--- smoke tests ---"
+	@kubectl get nodes --no-headers | wc -l | xargs -I{} bash -c '[ {} -ge 3 ] && echo "[+] Nodes: {}" || echo "[-] Expected 3 nodes, got {}"'
+	@kubectl get deployment argocd-server -n argocd &>/dev/null && echo "[+] ArgoCD running" || echo "[-] ArgoCD missing"
+	@kubectl get deployment prometheus-grafana -n monitoring &>/dev/null && echo "[+] Grafana running" || echo "[-] Grafana missing"
+	@kubectl get deployment ingress-nginx-controller -n ingress-nginx &>/dev/null && echo "[+] Ingress running" || echo "[-] Ingress missing"
+	@kubectl get pod vault-0 -n vault &>/dev/null && echo "[+] Vault running" || echo "[-] Vault missing"
+	@kubectl get statefulset prometheus-prometheus-kube-prometheus-prometheus -n monitoring &>/dev/null && echo "[+] Prometheus running" || echo "[-] Prometheus missing"
+	@echo "--- done ---"
 
 clean: ## remove generated files
 	rm -rf kubeconfig .certs/

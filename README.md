@@ -254,6 +254,7 @@ make bootstrap      # set up everything from scratch
 make teardown       # destroy the cluster
 make port-forward   # access services in browser
 make status         # show cluster health
+make verify         # run smoke tests against running cluster
 make lint           # run all linters
 make test           # run unit tests
 make build          # build docker images

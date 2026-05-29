@@ -1,6 +1,13 @@
 # HashiCorp Vault installation for secrets management
-# Uses the official Helm chart values applied as a HelmRelease-style manifest
-# In practice, this is deployed via ArgoCD or helm install
+# Uses dev mode for local development — data is stored in-memory and lost on restart.
+#
+# ⚠️  WARNING: Dev mode is NOT for production use.
+#     For production, use the official Helm chart with:
+#       - Raft/Consul storage backend
+#       - Auto-unseal via cloud KMS
+#       - HA with 3+ replicas
+#       - TLS enabled
+#     See: https://developer.hashicorp.com/vault/docs/platform/k8s/helm
 ---
 apiVersion: v1
 kind: ServiceAccount
