@@ -13,7 +13,8 @@ terraform {
 # Wait for the cluster to be fully ready before applying networking
 resource "null_resource" "wait_for_cluster" {
   provisioner "local-exec" {
-    command = "kubectl wait --for=condition=Ready nodes --all --timeout=120s --kubeconfig=../kubeconfig"
+    interpreter = ["bash", "-c"]
+    command     = "kubectl wait --for=condition=Ready nodes --all --timeout=120s --kubeconfig=../kubeconfig"
   }
 }
 
@@ -23,7 +24,8 @@ resource "null_resource" "install_metallb" {
   depends_on = [null_resource.wait_for_cluster]
 
   provisioner "local-exec" {
-    command = <<-EOT
+    interpreter = ["bash", "-c"]
+    command     = <<-EOT
       kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-native.yaml --kubeconfig=../kubeconfig
       kubectl wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb --timeout=120s --kubeconfig=../kubeconfig
     EOT
@@ -36,7 +38,8 @@ resource "null_resource" "configure_metallb" {
   depends_on = [null_resource.install_metallb]
 
   provisioner "local-exec" {
-    command = <<-EOT
+    interpreter = ["bash", "-c"]
+    command     = <<-EOT
       cat <<EOF | kubectl apply --kubeconfig=../kubeconfig -f -
       apiVersion: metallb.io/v1beta1
       kind: IPAddressPool
